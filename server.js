@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ⚠️ ADD YOUR DISCORD WEBHOOK HERE ⚠️
+// ⚠️ YOUR DISCORD WEBHOOK HERE ⚠️
 const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1402491984848879627/PACItDfwHBr8grhkiW4DXPLYFQeh1J6z_1pre8TvbpTEuXEYc-vxJLdlGREliYI_2IKw";
 
 // Store games
@@ -37,7 +37,7 @@ async function sendDiscordAlert(gameId, gameInfo) {
         },
         {
           name: "⚡ Quick Action",
-          value: `[💥 DESTROY THIS GAME NOW](${req.headers.host ? 'https://' + req.headers.host : 'https://ainz-destruction-server.onrender.com'})`,
+          value: `[💥 DESTROY THIS GAME NOW](https://ainz-destruction-server.onrender.com)`,
           inline: false
         }
       ],
@@ -160,7 +160,7 @@ app.get('/', (req, res) => {
     <body>
       <div class="header">
         <h1>💥 AINZ DESTRUCTION CONTROL PANEL</h1>
-        <p>Server: ${req.headers.host || 'ainz-destruction-server.onrender.com'}</p>
+        <p>Server: ainz-destruction-server.onrender.com</p>
         <div class="stats">
           <div class="stat-card">
             <div class="stat-number">${totalGames}</div>
@@ -241,13 +241,13 @@ app.get('/', (req, res) => {
         
         // Destroy single game
         async function destroySingle(gameId) {
-          if (!confirm(\`Destroy game \${gameId}?\`)) return;
+          if (!confirm('Destroy game ' + gameId + '?')) return;
           
           const response = await fetch('/destroy/' + gameId);
           const result = await response.json();
           
           if (result.status === 'destroy_scheduled') {
-            alert(\`✅ Game \${gameId} will be destroyed!\\nDiscord alert sent.\`);
+            alert('✅ Game ' + gameId + ' will be destroyed!\\nDiscord alert sent.');
             
             // Send Discord notification
             await fetch('/notify-destroy/' + gameId);
@@ -264,13 +264,13 @@ app.get('/', (req, res) => {
             return;
           }
           
-          if (!confirm(\`Destroy game \${gameId}?\`)) return;
+          if (!confirm('Destroy game ' + gameId + '?')) return;
           
           const response = await fetch('/destroy/' + gameId);
           const result = await response.json();
           
           if (result.status === 'destroy_scheduled') {
-            alert(\`✅ Game \${gameId} scheduled for destruction!\\nDiscord alert sent.\`);
+            alert('✅ Game ' + gameId + ' scheduled for destruction!\\nDiscord alert sent.');
             document.getElementById('gameId').value = '';
             
             // Send Discord notification
@@ -308,7 +308,7 @@ app.post('/register', async (req, res) => {
       discord_alert_sent: false
     };
     
-    console.log(\`⚠️ Game registered: \${gameId}\`);
+    console.log('⚠️ Game registered: ' + gameId);
     
     // Send Discord alert
     if (DISCORD_WEBHOOK) {
@@ -318,7 +318,7 @@ app.post('/register', async (req, res) => {
     
     res.json({
       status: 'registered',
-      message: \`Game \${gameId} registered\`,
+      message: 'Game ' + gameId + ' registered',
       discord_alert_sent: unauthorizedGames[gameId].discord_alert_sent
     });
   } catch (error) {
@@ -331,7 +331,7 @@ app.get('/check/:gameId', (req, res) => {
   const gameId = req.params.gameId;
   
   if (unauthorizedGames[gameId] && unauthorizedGames[gameId].destroy) {
-    console.log(\`💥 Sending DESTROY to: \${gameId}\`);
+    console.log('💥 Sending DESTROY to: ' + gameId);
     res.json({ destroy: true });
   } else {
     res.json({ destroy: false });
@@ -353,7 +353,7 @@ app.get('/destroy/:gameId', async (req, res) => {
     unauthorizedGames[gameId].destroyed_at = new Date().toISOString();
   }
   
-  console.log(\`💥 Marked for destruction: \${gameId}\`);
+  console.log('💥 Marked for destruction: ' + gameId);
   
   // Send Discord notification
   if (DISCORD_WEBHOOK) {
@@ -365,10 +365,10 @@ app.get('/destroy/:gameId', async (req, res) => {
           content: "@here ✅ **GAME DESTROYED!**",
           embeds: [{
             title: "💥 GAME DESTROYED",
-            description: \`Game \${gameId} has been destroyed!\`,
+            description: 'Game ' + gameId + ' has been destroyed!',
             color: 0x00ff00,
             fields: [
-              { name: "Game ID", value: \`\${gameId}\`, inline: true },
+              { name: "Game ID", value: gameId, inline: true },
               { name: "Time", value: new Date().toLocaleString(), inline: true }
             ]
           }]
@@ -381,7 +381,7 @@ app.get('/destroy/:gameId', async (req, res) => {
   
   res.json({
     status: 'destroy_scheduled',
-    message: \`Game \${gameId} will be destroyed\`
+    message: 'Game ' + gameId + ' will be destroyed'
   });
 });
 
@@ -398,10 +398,10 @@ app.get('/notify-destroy/:gameId', async (req, res) => {
           content: "✅ **DESTRUCTION COMMAND SENT**",
           embeds: [{
             title: "💥 DESTRUCTION INITIATED",
-            description: \`Game \${gameId} destruction command sent!\`,
+            description: 'Game ' + gameId + ' destruction command sent!',
             color: 0xff9900,
             fields: [
-              { name: "Game ID", value: \`\${gameId}\`, inline: true },
+              { name: "Game ID", value: gameId, inline: true },
               { name: "Status", value: "Will be destroyed in 15 seconds", inline: true }
             ],
             timestamp: new Date().toISOString()
@@ -434,7 +434,7 @@ app.get('/health', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(\`🚀 Server running on port \${PORT}\`);
-  console.log(\`💥 Ready to destroy games!\`);
-  console.log(\`📢 Discord webhook: \${DISCORD_WEBHOOK ? 'Configured' : 'Not configured'}\`);
+  console.log('🚀 Server running on port ' + PORT);
+  console.log('💥 Ready to destroy games!');
+  console.log('📢 Discord webhook: ' + (DISCORD_WEBHOOK ? 'Configured' : 'Not configured'));
 });
