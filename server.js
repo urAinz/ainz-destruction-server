@@ -301,10 +301,10 @@ app.post('/register', (req, res) => {
             game_id, 
             place_id, 
             name, 
-            studio_name, 
-            creator, 
+            studio_name,  // This now has ID(DisplayName) format
             creator_type,
             creator_id,
+            creator,       // This also has ID(DisplayName) format
             registered_at 
         } = req.body;
         
@@ -314,15 +314,16 @@ app.post('/register', (req, res) => {
             name: name || 'Unknown Game',
             studio_name: studio_name || 'Unknown',
             place_id: place_id || 'unknown',
-            creator: creator_id || creator || 'unknown',
+            creator: creator || 'Unknown',  // Now shows ID(DisplayName)
             creator_type: creator_type || 'unknown',
+            creator_id: creator_id || 'unknown',
             destroy: false,
             registered_at: registered_at || new Date().toISOString(),
             last_check: new Date().toISOString()
         };
         
         console.log('⚠️ Game registered: ' + gameId);
-        console.log('📊 Game details:', unauthorizedGames[gameId]);
+        console.log('📊 Creator info:', unauthorizedGames[gameId].creator);
         
         // Send Discord alert for NEW unauthorized game
         sendDiscordWebhook({
