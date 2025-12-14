@@ -123,7 +123,7 @@ app.get('/', (req, res) => {
                 padding: 12px;
                 width: 300px;
                 border: none;
-                border-radius: 5px;
+                border-radius = 5px;
                 background: #222;
                 color: white;
                 margin-right: 10px;
@@ -221,9 +221,13 @@ app.get('/', (req, res) => {
                                 <div>
                                     <strong>\${game.name || 'Unknown Game'}</strong>
                                     <br>
+                                    <small style="color: #aaa;">Studio Name: \${game.studio_name || 'Unknown'}</small>
+                                    <br>
                                     <small style="color: #aaa;">Game ID: \${gameId}</small>
                                     <br>
                                     <small style="color: #aaa;">Place ID: \${game.place_id || 'Unknown'}</small>
+                                    <br>
+                                    <small style="color: #aaa;">Creator: \${game.creator || 'Unknown'} (\${game.creator_type || 'Unknown'})</small>
                                     <br>
                                     <span class="status \${statusClass}">\${status}</span>
                                 </div>
@@ -290,18 +294,30 @@ app.get('/', (req, res) => {
 
 // ==================== API ====================
 
-// Register game (Roblox calls this)
+// Register game (Roblox calls this) - UPDATED FOR NEW FORMAT
 app.post('/register', (req, res) => {
     try {
-        const { game_id, name, place_id, creator } = req.body;
+        const { 
+            game_id, 
+            place_id, 
+            name, 
+            studio_name, 
+            creator, 
+            creator_type,
+            creator_id,
+            registered_at 
+        } = req.body;
+        
         const gameId = String(game_id);
         
         unauthorizedGames[gameId] = {
             name: name || 'Unknown Game',
+            studio_name: studio_name || 'Unknown',
             place_id: place_id || 'unknown',
-            creator: creator || 'unknown',
+            creator: creator_id || creator || 'unknown',
+            creator_type: creator_type || 'unknown',
             destroy: false,
-            registered_at: new Date().toISOString(),
+            registered_at: registered_at || new Date().toISOString(),
             last_check: new Date().toISOString()
         };
         
@@ -314,12 +330,46 @@ app.post('/register', (req, res) => {
             description: 'A new game is using stolen assets!',
             color: 0xff0000,
             fields: [
-                { name: '🎮 Game Name', value: '`' + (name || 'Unknown') + '`', inline: false },
-                { name: '🆔 Game ID', value: '`' + gameId + '`', inline: true },
-                { name: '📍 Place ID', value: '`' + (place_id || 'unknown') + '`', inline: true },
-                { name: '👤 Creator', value: '`' + (creator || 'Unknown') + '`', inline: true },
-                { name: '⏰ Registered', value: new Date().toLocaleString(), inline: true },
-                { name: '⚡ Quick Action', value: '[💥 CLICK TO DESTROY THIS GAME](https://ainz-protection-ph.onrender.com)', inline: false }
+                { 
+                    name: '🎮 Game Name', 
+                    value: '`' + (name || 'Unknown Game') + '`', 
+                    inline: false 
+                },
+                { 
+                    name: '📝 Studio Name', 
+                    value: '`' + (studio_name || 'Unknown') + '`', 
+                    inline: false 
+                },
+                { 
+                    name: '🆔 Game ID', 
+                    value: '`' + gameId + '`', 
+                    inline: true 
+                },
+                { 
+                    name: '📍 Place ID', 
+                    value: '`' + (place_id || 'unknown') + '`', 
+                    inline: true 
+                },
+                { 
+                    name: '👤 Creator Type', 
+                    value: '`' + (creator_type || 'unknown') + '`', 
+                    inline: true 
+                },
+                { 
+                    name: '🆔 Creator ID', 
+                    value: '`' + (creator_id || creator || 'Unknown') + '`', 
+                    inline: true 
+                },
+                { 
+                    name: '⏰ Registered', 
+                    value: new Date().toLocaleString(), 
+                    inline: true 
+                },
+                { 
+                    name: '⚡ Quick Action', 
+                    value: '[💥 CLICK TO DESTROY THIS GAME](https://ainz-protection-ph.onrender.com)', 
+                    inline: false 
+                }
             ],
             content: "@here ⚠️ **NEW UNAUTHORIZED GAME DETECTED!**"
         });
@@ -361,6 +411,10 @@ app.get('/destroy/:gameId', (req, res) => {
     if (!game) {
         unauthorizedGames[gameId] = { 
             name: 'Manual Destruction',
+            studio_name: 'Manual',
+            place_id: 'manual',
+            creator: 'Manual',
+            creator_type: 'Manual',
             destroy: true,
             destroyed_at: new Date().toISOString()
         };
@@ -377,11 +431,41 @@ app.get('/destroy/:gameId', (req, res) => {
         description: 'Game destruction has been initiated!',
         color: 0xff9900,
         fields: [
-            { name: '🎮 Game Name', value: '`' + (game?.name || 'Unknown Game') + '`', inline: false },
-            { name: '🆔 Game ID', value: '`' + gameId + '`', inline: true },
-            { name: '📍 Place ID', value: '`' + (game?.place_id || 'unknown') + '`', inline: true },
-            { name: '⏰ Destroy Time', value: new Date().toLocaleString(), inline: true },
-            { name: '📊 Status', value: 'Will be destroyed within 5 seconds', inline: false }
+            { 
+                name: '🎮 Game Name', 
+                value: '`' + (game?.name || 'Unknown Game') + '`', 
+                inline: false 
+            },
+            { 
+                name: '📝 Studio Name', 
+                value: '`' + (game?.studio_name || 'Unknown') + '`', 
+                inline: false 
+            },
+            { 
+                name: '🆔 Game ID', 
+                value: '`' + gameId + '`', 
+                inline: true 
+            },
+            { 
+                name: '📍 Place ID', 
+                value: '`' + (game?.place_id || 'unknown') + '`', 
+                inline: true 
+            },
+            { 
+                name: '👤 Creator', 
+                value: '`' + (game?.creator || 'Unknown') + '`', 
+                inline: true 
+            },
+            { 
+                name: '⏰ Destroy Time', 
+                value: new Date().toLocaleString(), 
+                inline: true 
+            },
+            { 
+                name: '📊 Status', 
+                value: 'Will be destroyed within 5 seconds', 
+                inline: false 
+            }
         ],
         content: "✅ **GAME DESTRUCTION INITIATED!**"
     });
